@@ -189,16 +189,16 @@ impl SmartModulePackageKey {
     /// otherwise it should match against package
     pub fn is_match(&self, name: &str, package: Option<&SmartModulePackage>) -> bool {
         if let Some(package) = package {
-            if let Some(version) = &self.version {
-                if package.version != *version {
-                    return false;
-                }
+            if let Some(version) = &self.version
+                && package.version != *version
+            {
+                return false;
             }
 
-            if let Some(group) = &self.group {
-                if package.group != *group {
-                    return false;
-                }
+            if let Some(group) = &self.group
+                && package.group != *group
+            {
+                return false;
             }
 
             self.name == package.name
@@ -314,41 +314,49 @@ mod package_test {
 
     #[test]
     fn test_pkg_validation() {
-        assert!(SmartModulePackage {
-            name: "a".to_owned(),
-            group: "b".to_owned(),
-            version: FluvioSemVersion::parse("0.1.0").unwrap(),
-            api_version: FluvioSemVersion::parse("0.1.0").unwrap(),
-            ..Default::default()
-        }
-        .is_valid());
+        assert!(
+            SmartModulePackage {
+                name: "a".to_owned(),
+                group: "b".to_owned(),
+                version: FluvioSemVersion::parse("0.1.0").unwrap(),
+                api_version: FluvioSemVersion::parse("0.1.0").unwrap(),
+                ..Default::default()
+            }
+            .is_valid()
+        );
 
-        assert!(!SmartModulePackage {
-            name: "".to_owned(),
-            group: "b".to_owned(),
-            version: FluvioSemVersion::parse("0.1.0").unwrap(),
-            api_version: FluvioSemVersion::parse("0.1.0").unwrap(),
-            ..Default::default()
-        }
-        .is_valid());
+        assert!(
+            !SmartModulePackage {
+                name: "".to_owned(),
+                group: "b".to_owned(),
+                version: FluvioSemVersion::parse("0.1.0").unwrap(),
+                api_version: FluvioSemVersion::parse("0.1.0").unwrap(),
+                ..Default::default()
+            }
+            .is_valid()
+        );
 
-        assert!(!SmartModulePackage {
-            name: "c".to_owned(),
-            group: "".to_owned(),
-            version: FluvioSemVersion::parse("0.1.0").unwrap(),
-            api_version: FluvioSemVersion::parse("0.1.0").unwrap(),
-            ..Default::default()
-        }
-        .is_valid());
+        assert!(
+            !SmartModulePackage {
+                name: "c".to_owned(),
+                group: "".to_owned(),
+                version: FluvioSemVersion::parse("0.1.0").unwrap(),
+                api_version: FluvioSemVersion::parse("0.1.0").unwrap(),
+                ..Default::default()
+            }
+            .is_valid()
+        );
 
-        assert!(!SmartModulePackage {
-            name: "".to_owned(),
-            group: "".to_owned(),
-            version: FluvioSemVersion::parse("0.1.0").unwrap(),
-            api_version: FluvioSemVersion::parse("0.1.0").unwrap(),
-            ..Default::default()
-        }
-        .is_valid());
+        assert!(
+            !SmartModulePackage {
+                name: "".to_owned(),
+                group: "".to_owned(),
+                version: FluvioSemVersion::parse("0.1.0").unwrap(),
+                api_version: FluvioSemVersion::parse("0.1.0").unwrap(),
+                ..Default::default()
+            }
+            .is_valid()
+        );
     }
 
     #[test]
@@ -430,12 +438,16 @@ mod package_test {
                 .expect("parse")
                 .is_match(&valid_pkg.store_id(), Some(&valid_pkg))
         );
-        assert!(SmartModulePackageKey::from_qualified_name("module1")
-            .expect("parse")
-            .is_match(&valid_pkg.store_id(), Some(&valid_pkg)));
-        assert!(!SmartModulePackageKey::from_qualified_name("module2")
-            .expect("parse")
-            .is_match(&valid_pkg.store_id(), Some(&valid_pkg)));
+        assert!(
+            SmartModulePackageKey::from_qualified_name("module1")
+                .expect("parse")
+                .is_match(&valid_pkg.store_id(), Some(&valid_pkg))
+        );
+        assert!(
+            !SmartModulePackageKey::from_qualified_name("module2")
+                .expect("parse")
+                .is_match(&valid_pkg.store_id(), Some(&valid_pkg))
+        );
 
         let in_valid_pkg = SmartModulePackage {
             name: "module2".to_owned(),
@@ -446,9 +458,11 @@ mod package_test {
         };
         assert!(!key.is_match(&in_valid_pkg.store_id(), Some(&in_valid_pkg)));
 
-        assert!(SmartModulePackageKey::from_qualified_name("module1")
-            .expect("parse")
-            .is_match("module1", None));
+        assert!(
+            SmartModulePackageKey::from_qualified_name("module1")
+                .expect("parse")
+                .is_match("module1", None)
+        );
     }
 
     #[test]

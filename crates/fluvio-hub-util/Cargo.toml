@@ -1,12 +1,12 @@
 [package]
 name = "fluvio-hub-util"
-version = "0.0.0"
-edition = "2021"
-license = "Apache-2.0"
 description = "API for SmartModule Hub"
-authors = ["fluvio.io"]
-repository = "https://github.com/infinyon/fluvio"
+version = "0.0.0"
 publish = false
+repository.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
 
 [features]
 connector-cmds = [
@@ -48,7 +48,7 @@ clap = { workspace = true, optional = true }
 comfy-table = { workspace = true, optional = true }
 
 fluvio-future = { workspace = true, features = ["fixture", "task", "tls"] }
-fluvio-hub-protocol = { path = "../fluvio-hub-protocol" }
+fluvio-hub-protocol = { workspace = true }
 fluvio-types = { workspace = true }
 fluvio-extension-common = { workspace = true,  optional = true }
 
@@ -58,4 +58,4 @@ ureq = { workspace = true }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 http = { workspace = true, features = ["std"] }
 getrandom = { workspace = true, features = ["js"] }
-reqwest = { workspace = true, features = ["json"] }
+reqwest = { workspace = true, features = ["json", "rustls-tls"] }

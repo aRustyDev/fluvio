@@ -97,14 +97,13 @@ impl MirrorHomeHandler {
                 &req_msg.request.remote_cluster_id,
             )
             .await
+            && !authorized
         {
-            if !authorized {
-                warn!(
-                    "identity mismatch for remote_id: {}",
-                    req_msg.request.remote_cluster_id
-                );
-                return;
-            }
+            warn!(
+                "identity mismatch for remote_id: {}",
+                req_msg.request.remote_cluster_id
+            );
+            return;
         }
 
         // check if remote cluster exists
@@ -448,7 +447,9 @@ impl MirrorHomeHandler {
                     new_remote_leo,
                     "remote has more records, this should not happen, this is error"
                 );
-                return Err(anyhow!("remote's leo: {new_remote_leo} > leader's leo: {leader_leo} this should not happen, this is error"));
+                Err(anyhow!(
+                    "remote's leo: {new_remote_leo} > leader's leo: {leader_leo} this should not happen, this is error"
+                ))
             }
             std::cmp::Ordering::Less => {
                 debug!(

@@ -268,7 +268,7 @@ fn connector_name_from_config(package_cmd: PackageCmd, config: PathBuf) -> Resul
         Err(err) => {
             return Err(err).with_context(|| {
                 format!("Could not open connector config at: {}", config.display())
-            })
+            });
         }
     };
 
@@ -597,14 +597,13 @@ mod local_index {
                 };
 
                 println!(
-                    "Shutting down connector: {} \
-                    \npid: {} \
-                    \nLog File: {}",
-                    name, process_id, log_file
+                    "Shutting down connector: {name} \
+                    \npid: {process_id} \
+                    \nLog File: {log_file}"
                 );
                 index.remove(i)?;
             }
-            None => println!("Connector not found: {}", connector_name),
+            None => println!("Connector not found: {connector_name}"),
         }
 
         index.flush()

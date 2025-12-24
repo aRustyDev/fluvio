@@ -248,7 +248,7 @@ pub async fn push_package_api(put_url: &str, pkgpath: &str, access: &HubAccess) 
             let bodymsg = res
                 .body_string()
                 .map_err(|_e| HubError::HubAccess("Failed to download err body".into()))?;
-            let msg = format!("error status code({}) {}", status, bodymsg);
+            let msg = format!("error status code({status}) {bodymsg}");
             Err(HubError::HubAccess(msg))
         }
     }
@@ -288,9 +288,9 @@ mod util_tests {
             assert!(out.is_ok());
             let (org, pkg, ver) = out.unwrap();
 
-            assert_eq!(rec.1 .0, org);
-            assert_eq!(rec.1 .1, pkg);
-            assert_eq!(rec.1 .2, ver);
+            assert_eq!(rec.1.0, org);
+            assert_eq!(rec.1.1, pkg);
+            assert_eq!(rec.1.2, ver);
         }
     }
 

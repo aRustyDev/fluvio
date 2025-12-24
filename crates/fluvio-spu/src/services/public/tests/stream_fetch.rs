@@ -789,7 +789,10 @@ async fn test_stream_filter_error_fetch(
             assert_eq!(error.record_value.as_ref(), "ten".as_bytes());
             assert_eq!(error.kind, SmartModuleKindError::Filter);
             let rendered = format!("{error}");
-            assert_eq!(rendered, "Oops something went wrong\n\nCaused by:\n   0: Failed to parse int\n   1: invalid digit found in string\n\nSmartModule Info: \n    Type: Filter\n    Offset: 10\n    Key: NULL\n    Value: ten");
+            assert_eq!(
+                rendered,
+                "Oops something went wrong\n\nCaused by:\n   0: Failed to parse int\n   1: invalid digit found in string\n\nSmartModule Info: \n    Type: Filter\n    Offset: 10\n    Key: NULL\n    Value: ten"
+            );
         }
         _ => panic!("should have gotten error code"),
     }
@@ -881,7 +884,7 @@ async fn test_stream_filter_max(
         .write_record_set(&mut create_filter_raw_records(10), ctx.follower_notifier())
         .await
         .expect("write"); // 3000 bytes total
-                          // now total of 300 filter records bytes (min), but last filter record is greater than max
+    // now total of 300 filter records bytes (min), but last filter record is greater than max
 
     let stream_request = DefaultStreamFetchRequest::builder()
         .topic(topic.to_owned())
@@ -2339,9 +2342,8 @@ async fn test_stream_metrics() {
     assert_eq!(ctx.metrics().outbound().connector_bytes(), 0);
     assert_eq!(ctx.metrics().outbound().connector_records(), 0);
 
-    assert_eq!(ctx.metrics().chain_metrics().bytes_in(), 0);
-    assert_eq!(ctx.metrics().chain_metrics().records_out(), 0);
-    assert_eq!(ctx.metrics().chain_metrics().invocation_count(), 0);
+    let metrics_sm = ctx.metrics().smartmodule_metrics();
+    assert_eq!(metrics_sm.len(), 0);
 
     let batch = Batch::from(vec![
         Record::new(RecordData::from("foo")),
@@ -2383,9 +2385,8 @@ async fn test_stream_metrics() {
         assert_eq!(ctx.metrics().outbound().connector_bytes(), 0);
         assert_eq!(ctx.metrics().outbound().connector_records(), 0);
 
-        assert_eq!(ctx.metrics().chain_metrics().bytes_in(), 0);
-        assert_eq!(ctx.metrics().chain_metrics().records_out(), 0);
-        assert_eq!(ctx.metrics().chain_metrics().invocation_count(), 0);
+        let metrics_sm = ctx.metrics().smartmodule_metrics();
+        assert_eq!(metrics_sm.len(), 0);
     }
     {
         let mut request = RequestMessage::new_request(
@@ -2412,15 +2413,15 @@ async fn test_stream_metrics() {
         assert_eq!(ctx.metrics().outbound().connector_bytes(), 81);
         assert_eq!(ctx.metrics().outbound().connector_records(), 2);
 
-        assert_eq!(ctx.metrics().chain_metrics().bytes_in(), 0);
-        assert_eq!(ctx.metrics().chain_metrics().records_out(), 0);
-        assert_eq!(ctx.metrics().chain_metrics().invocation_count(), 0);
+        let metrics_sm = ctx.metrics().smartmodule_metrics();
+        assert_eq!(metrics_sm.len(), 0);
     }
     {
         let wasm = zip(read_wasm_module(FLUVIO_WASM_FILTER));
         let smartmodule = SmartModuleInvocation {
             wasm: SmartModuleInvocationWasm::AdHoc(wasm),
             kind: SmartModuleKind::Filter,
+            name: Some(FLUVIO_WASM_FILTER.to_string()),
             ..Default::default()
         };
         let mut request = RequestMessage::new_request(
@@ -2449,9 +2450,18 @@ async fn test_stream_metrics() {
         assert_eq!(ctx.metrics().outbound().connector_bytes(), 84); // if records went through smartengine we calculate size of deserialized data, so it's +3 bytes here
         assert_eq!(ctx.metrics().outbound().connector_records(), 3); // one records passed, one filtered out
 
-        assert_eq!(ctx.metrics().chain_metrics().bytes_in(), 24);
-        assert_eq!(ctx.metrics().chain_metrics().records_out(), 1);
-        assert_eq!(ctx.metrics().chain_metrics().invocation_count(), 1); // one invocation per batch
+        let metrics_sm = ctx.metrics().smartmodule_metrics();
+        assert_eq!(metrics_sm.len(), 1);
+
+        println!("metrics: {metrics_sm:#?}");
+
+        if let Some(filter_metrics) = metrics_sm.get(FLUVIO_WASM_FILTER) {
+            assert_eq!(filter_metrics.bytes_in(), 24);
+            assert_eq!(filter_metrics.records_out(), 1);
+            assert_eq!(filter_metrics.invocation_count(), 1);
+        } else {
+            panic!("SmartModule metrics not found for {FLUVIO_WASM_FILTER}");
+        }
     }
 
     server_end_event.notify();

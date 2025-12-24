@@ -124,8 +124,7 @@ async fn handle_update(
     if let Some(ref replica) = ctx.leaders_state().get(&consumer_replica_key).await {
         trace!(
             consumer.consumer_id,
-            offset,
-            "update consumer offset locally"
+            offset, "update consumer offset locally"
         );
         if let Err(err) = update_offset_for_leader(
             ctx,
@@ -143,8 +142,7 @@ async fn handle_update(
     } else {
         trace!(
             consumer.consumer_id,
-            offset,
-            "update consumer offset remote"
+            offset, "update consumer offset remote"
         );
         update_offset_in_peer(
             ctx,
@@ -205,16 +203,16 @@ async fn handle_fetch_consumers(
         .filter_map(|(key, consumer)| {
             // filter by replica_id and consumer_id
             if let Some(ref filter_opts) = req_msg.request.filter_opts {
-                if let Some(ref replica_id) = filter_opts.replica_id {
-                    if key.replica_id != *replica_id {
-                        return None;
-                    }
+                if let Some(ref replica_id) = filter_opts.replica_id
+                    && key.replica_id != *replica_id
+                {
+                    return None;
                 }
 
-                if let Some(ref consumer_id) = filter_opts.consumer_id {
-                    if key.consumer_id != *consumer_id {
-                        return None;
-                    }
+                if let Some(ref consumer_id) = filter_opts.consumer_id
+                    && key.consumer_id != *consumer_id
+                {
+                    return None;
                 }
             }
 

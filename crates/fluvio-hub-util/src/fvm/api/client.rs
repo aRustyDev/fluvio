@@ -52,7 +52,7 @@ impl Client {
 
         let error = res.json::<ApiError>().map_err(|err| {
             tracing::debug!(?err, "Failed to parse API Error from Hub");
-            Error::msg(format!("Server responded with status code {}", res_status))
+            Error::msg(format!("Server responded with status code {res_status}"))
         })?;
 
         tracing::debug!(?error, "Server responded with not successful status code");
@@ -129,11 +129,17 @@ mod tests {
             )
             .unwrap();
 
-        assert_eq!(url.as_str(), "https://hub.infinyon.cloud/hub/v1/fvm/pkgset/0.10.14-dev+123345abc?arch=arm-unknown-linux-gnueabihf", "failed on Scenario Using Tag");
+        assert_eq!(
+            url.as_str(),
+            "https://hub.infinyon.cloud/hub/v1/fvm/pkgset/0.10.14-dev+123345abc?arch=arm-unknown-linux-gnueabihf",
+            "failed on Scenario Using Tag"
+        );
 
         // Scenario: Using Context
 
-        set_var(INFINYON_CI_CONTEXT, "unit_testing");
+        unsafe {
+            set_var(INFINYON_CI_CONTEXT, "unit_testing");
+        }
 
         let client = Client::new("https://hub.infinyon.cloud").unwrap();
         let url = client
@@ -143,7 +149,13 @@ mod tests {
             )
             .unwrap();
 
-        assert_eq!(url.as_str(), "https://hub.infinyon.cloud/hub/v1/fvm/pkgset/0.10.14-dev+123345abc?arch=arm-unknown-linux-gnueabihf&ctx=unit_testing", "failed on Scenario Using Context");
-        remove_var(INFINYON_CI_CONTEXT);
+        assert_eq!(
+            url.as_str(),
+            "https://hub.infinyon.cloud/hub/v1/fvm/pkgset/0.10.14-dev+123345abc?arch=arm-unknown-linux-gnueabihf&ctx=unit_testing",
+            "failed on Scenario Using Context"
+        );
+        unsafe {
+            remove_var(INFINYON_CI_CONTEXT);
+        }
     }
 }

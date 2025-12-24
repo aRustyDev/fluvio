@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use anyhow::{ensure, Result};
 use fluvio::{consumer::ConsumerStream, Fluvio};
-use fluvio_future::future::timeout;
 use futures_lite::StreamExt;
+use fluvio_future::future::timeout;
 
 use crate::tests::consumer_offsets::utils::{
     self, create_consumer_config, delete_consumer, find_consumer, now, RECORDS_COUNT,
@@ -83,9 +83,11 @@ pub async fn test_strategy_manual_from_beginning(
     }
 
     for partition in 0..partitions {
-        ensure!(find_consumer(client, &consumer_id, partition)
-            .await?
-            .is_none());
+        ensure!(
+            find_consumer(client, &consumer_id, partition)
+                .await?
+                .is_none()
+        );
     }
 
     Ok(())

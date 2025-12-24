@@ -98,6 +98,7 @@ pub enum ClusterCheckError {
     ProgressError(#[from] TemplateError),
 }
 
+#[allow(dead_code)]
 /// An error occurred during the checking process
 #[derive(thiserror::Error, Debug)]
 pub enum ClusterAutoFixError {
@@ -232,11 +233,15 @@ pub enum UnrecoverableCheckStatus {
     #[error("Local Fluvio cluster still running")]
     ExistingLocalCluster,
 
-    #[error("Local Fluvio cluster wasn't deleted. Use 'resume' to resume created cluster or 'delete' before starting a new one")]
+    #[error(
+        "Local Fluvio cluster wasn't deleted. Use 'resume' to resume created cluster or 'delete' before starting a new one"
+    )]
     CreateLocalConfigError,
 
     /// The installed version of the local cluster is incompatible
-    #[error("Check Versions match failed: cannot resume a {installed} cluster with fluvio version {required}.\nShutdown the cluster with \"fluvio cluster shutdown\" and use \"fluvio cluster upgrade\" to update to the new version")]
+    #[error(
+        "Check Versions match failed: cannot resume a {installed} cluster with fluvio version {required}.\nShutdown the cluster with \"fluvio cluster shutdown\" and use \"fluvio cluster upgrade\" to update to the new version"
+    )]
     IncompatibleLocalClusterVersion {
         /// The currently-installed version
         installed: String,
@@ -305,13 +310,13 @@ impl ClusterCheck for ActiveKubernetesCluster {
             Err(K8ConfigError::NoCurrentContext) => {
                 return Ok(CheckStatus::Unrecoverable(
                     UnrecoverableCheckStatus::NoActiveKubernetesContext,
-                ))
+                ));
             }
 
             Err(err) => {
                 return Ok(CheckStatus::Unrecoverable(
                     UnrecoverableCheckStatus::UnhandledK8ClientError(format!("K8 Error: {err:#?}")),
-                ))
+                ));
             }
         };
 
@@ -319,7 +324,7 @@ impl ClusterCheck for ActiveKubernetesCluster {
             K8Config::Pod(_) => {
                 return Ok(CheckStatus::Unrecoverable(UnrecoverableCheckStatus::Other(
                     "Pod config found".to_owned(),
-                )))
+                )));
             }
             K8Config::KubeConfig(context) => context,
         };
@@ -383,7 +388,7 @@ impl ClusterCheck for K8Version {
             None => {
                 return Ok(CheckStatus::Unrecoverable(
                     UnrecoverableCheckStatus::CannotConnectToKubernetes,
-                ))
+                ));
             }
         };
 
@@ -430,7 +435,7 @@ impl ClusterCheck for HelmVersion {
                     UnrecoverableCheckStatus::NoHelmClient(format!(
                         "Unable to find helm: {err:#?}"
                     )),
-                ))
+                ));
             }
         };
 
@@ -811,7 +816,7 @@ impl ClusterChecker {
     ///
     /// [`run`]: ClusterChecker::run
     pub fn with_preflight_checks(mut self) -> Self {
-        let checks: Vec<Box<(dyn ClusterCheck)>> = vec![
+        let checks: Vec<Box<dyn ClusterCheck>> = vec![
             Box::new(ActiveKubernetesCluster),
             Box::new(K8Version),
             Box::new(HelmVersion),
@@ -846,7 +851,7 @@ impl ClusterChecker {
     ///
     /// [`run`]: ClusterChecker::run
     pub fn with_k8_checks(mut self) -> Self {
-        let checks: Vec<Box<(dyn ClusterCheck)>> = vec![
+        let checks: Vec<Box<dyn ClusterCheck>> = vec![
             Box::new(ActiveKubernetesCluster),
             Box::new(HelmVersion),
             Box::new(K8Version),
@@ -861,7 +866,7 @@ impl ClusterChecker {
     ///
     /// [`run`]: ClusterChecker::run
     pub fn with_local_checks(mut self) -> Self {
-        let checks: Vec<Box<(dyn ClusterCheck)>> = vec![
+        let checks: Vec<Box<dyn ClusterCheck>> = vec![
             Box::new(HelmVersion),
             Box::new(K8Version),
             Box::new(ActiveKubernetesCluster),
@@ -963,11 +968,9 @@ impl ClusterChecker {
                 failed = true;
             }
 
-            if passed {
-                if let Some(component) = component {
-                    debug!(?component, "component registered");
-                    components.insert(component);
-                }
+            if passed && let Some(component) = component {
+                debug!(?component, "component registered");
+                components.insert(component);
             }
 
             pb.finish_and_clear();

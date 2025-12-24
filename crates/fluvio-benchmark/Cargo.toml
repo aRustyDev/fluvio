@@ -1,15 +1,16 @@
 [package]
 name = "fluvio-benchmark"
-version = "0.0.0"
-edition = "2021"
-authors = ["Fluvio Contributors <team@fluvio.io>"]
 description = "Fluvio benchmarking tool"
-repository = "https://github.com/infinyon/fluvio"
-license = "Apache-2.0"
+version = "0.0.0"
+repository.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
 publish = false
 
 [dependencies]
 anyhow = { workspace = true }
+async-lock = { workspace = true }
 async-channel = { workspace = true }
 bytesize = { workspace = true, features = ['serde'] }
 clap = { workspace = true, features = ["std","derive"] }
@@ -32,6 +33,5 @@ fluvio = { workspace = true  }
 fluvio-future = { workspace = true, features = [
     'task',
     'future',
-    'sync',
     'subscriber',
 ] }

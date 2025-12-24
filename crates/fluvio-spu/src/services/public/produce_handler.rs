@@ -115,14 +115,14 @@ async fn handle_produce_topic(
             }
         };
 
-        if let Some(mirror) = &leader_state.get_replica().mirror {
-            if let Some(err) = mirror.accept_traffic() {
-                debug!(%replica_id, "Mirror replica is not supported for produce");
-                topic_result
-                    .partitions
-                    .push(PartitionWriteResult::error(replica_id, err));
-                continue;
-            }
+        if let Some(mirror) = &leader_state.get_replica().mirror
+            && let Some(err) = mirror.accept_traffic()
+        {
+            debug!(%replica_id, "Mirror replica is not supported for produce");
+            topic_result
+                .partitions
+                .push(PartitionWriteResult::error(replica_id, err));
+            continue;
         }
 
         if let Err(err) = apply_smartmodules(
@@ -276,11 +276,11 @@ async fn apply_smartmodules(
         sm_ctx.chain_mut(),
         &mut batches,
         usize::MAX,
-        ctx.metrics().chain_metrics(),
+        //
     ) {
         Ok((result, sm_runtime_error)) => {
             if let Some(error) = sm_runtime_error {
-                return Err(ErrorCode::SmartModuleRuntimeError(error));
+                return Err(ErrorCode::SmartModuleRuntimeError(Box::new(error)));
             } else {
                 result
             }
@@ -293,7 +293,7 @@ async fn apply_smartmodules(
     };
 
     let smartmoduled_records = Batch::<RawRecords>::try_from(sm_result)
-        .map_err(|e| ErrorCode::Other(format!("Compression Error: {:?}", e)))?;
+        .map_err(|e| ErrorCode::Other(format!("Compression Error: {e:?}")))?;
 
     partition_request.records = RecordSet {
         batches: vec![smartmoduled_records],

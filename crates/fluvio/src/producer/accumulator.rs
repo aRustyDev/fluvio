@@ -7,6 +7,7 @@ use std::time::Duration;
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::Instant;
+use event_listener::Event;
 #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
 
@@ -16,8 +17,7 @@ use tracing::trace;
 use futures_util::future::{BoxFuture, Either, Shared};
 use futures_util::{FutureExt, ready};
 
-use fluvio_future::sync::{Mutex, MutexGuard};
-use fluvio_future::sync::Condvar;
+use fluvio_future::future::timeout;
 use fluvio_protocol::record::Batch;
 use fluvio_compression::Compression;
 use fluvio_protocol::record::Offset;
@@ -39,15 +39,15 @@ const RECORD_ENQUEUE_TIMEOUT: Duration = Duration::from_secs(30);
 pub(crate) type BatchHandler = (Arc<BatchEvents>, Arc<BatchesDeque>);
 
 pub(crate) struct BatchesDeque {
-    pub batches: Mutex<VecDeque<ProducerBatch>>,
-    pub control: Condvar,
+    pub batches: RwLock<VecDeque<ProducerBatch>>,
+    pub free_space_event: Event,
 }
 
 impl BatchesDeque {
     pub(crate) fn new() -> Self {
         Self {
-            batches: Mutex::new(VecDeque::new()),
-            control: Condvar::new(),
+            batches: RwLock::new(VecDeque::new()),
+            free_space_event: Event::new(),
         }
     }
 
@@ -113,7 +113,8 @@ impl RecordAccumulator {
             .ok_or(ProducerError::PartitionNotFound(partition_id))?;
 
         // Wait for space in the batch queue
-        let mut batches = self.wait_for_space(batches_lock).await?;
+        self.wait_for_space(batches_lock.clone()).await?;
+        let mut batches = batches_lock.batches.write().await;
 
         // If the last batch is not full, push the record to it
         if let Some(batch) = batches.back_mut() {
@@ -158,24 +159,23 @@ impl RecordAccumulator {
         ))
     }
 
-    async fn wait_for_space<'a>(
-        &self,
-        batches_lock: &'a Arc<BatchesDeque>,
-    ) -> Result<MutexGuard<'a, VecDeque<ProducerBatch>>, ProducerError> {
-        let mut batches = batches_lock.batches.lock().await;
-        if batches.len() >= self.queue_size {
-            let (guard, wait_result) = batches_lock
-                .control
-                .wait_timeout_until(batches, RECORD_ENQUEUE_TIMEOUT, |queue| {
-                    queue.len() < self.queue_size
-                })
-                .await;
-            if wait_result.timed_out() {
-                return Err(ProducerError::BatchQueueWaitTimeout);
+    /// Wait for space in the batch queue.
+    async fn wait_for_space(&self, batches_lock: Arc<BatchesDeque>) -> Result<(), ProducerError> {
+        let space_listener = batches_lock.free_space_event.listen();
+
+        loop {
+            let batches = batches_lock.batches.read().await;
+            if batches.len() < self.queue_size {
+                batches_lock.free_space_event.notify(1);
+                break;
             }
-            batches = guard;
         }
-        Ok(batches)
+
+        // Wait for space to become available
+        match timeout(RECORD_ENQUEUE_TIMEOUT, space_listener).await {
+            Ok(_) => Ok(()),
+            Err(_) => Err(ProducerError::BatchQueueWaitTimeout),
+        }
     }
 
     async fn create_and_new_batch(
@@ -568,13 +568,13 @@ mod test {
             .await
             .expect("failed push");
         assert!(
-            async_std::future::timeout(timeout, batches.listen_new_batch())
+            fluvio_future::future::timeout(timeout, batches.listen_new_batch())
                 .await
                 .is_ok()
         );
 
         assert!(
-            async_std::future::timeout(timeout, batches.listen_batch_full())
+            fluvio_future::future::timeout(timeout, batches.listen_batch_full())
                 .await
                 .is_err()
         );
@@ -584,7 +584,7 @@ mod test {
             .expect("failed push");
 
         assert!(
-            async_std::future::timeout(timeout, batches.listen_batch_full())
+            fluvio_future::future::timeout(timeout, batches.listen_batch_full())
                 .await
                 .is_err()
         );
@@ -594,7 +594,7 @@ mod test {
             .expect("failed push");
 
         assert!(
-            async_std::future::timeout(timeout, batches.listen_batch_full())
+            fluvio_future::future::timeout(timeout, batches.listen_batch_full())
                 .await
                 .is_ok()
         );
@@ -619,13 +619,13 @@ mod test {
             .clone();
 
         assert!(
-            async_std::future::timeout(timeout, batches.listen_new_batch())
+            fluvio_future::future::timeout(timeout, batches.listen_new_batch())
                 .await
                 .is_ok()
         );
 
         assert!(
-            async_std::future::timeout(timeout, batches.listen_batch_full())
+            fluvio_future::future::timeout(timeout, batches.listen_batch_full())
                 .await
                 .is_err()
         );

@@ -130,7 +130,7 @@ mod policy {
             let parts: Vec<&str> = urn.split(':').collect();
 
             let action_str = parts.first().ok_or(Error::custom("missing action"))?;
-            let action = serde_json::from_str(format!("\"{}\"", action_str).as_str())
+            let action = serde_json::from_str(format!("\"{action_str}\"").as_str())
                 .map_err(Error::custom)?;
 
             let instance = if parts.len() > 1 {
@@ -367,33 +367,47 @@ mod test {
 
         policy.0.insert(String::from("Default"), role1);
 
-        assert!(!policy
-            .evaluate(Action::Create, ObjectType::CustomSpu, None, &identity)
-            .await
-            .expect("eval"));
-        assert!(!policy
-            .evaluate(Action::Create, ObjectType::Topic, None, &identity)
-            .await
-            .expect("eval"));
-        assert!(policy
-            .evaluate(Action::Read, ObjectType::Topic, None, &identity)
-            .await
-            .expect("eval"));
-        assert!(policy
-            .evaluate(Action::Delete, ObjectType::Topic, Some("test"), &identity)
-            .await
-            .expect("eval"));
-        assert!(policy
-            .evaluate(Action::Update, ObjectType::Mirror, Some("user1"), &identity)
-            .await
-            .expect("eval"));
-        assert!(policy
-            .evaluate(Action::Update, ObjectType::Mirror, Some("user2"), &identity)
-            .await
-            .expect("eval"));
-        assert!(!policy
-            .evaluate(Action::Update, ObjectType::Mirror, Some("user3"), &identity)
-            .await
-            .expect("eval"));
+        assert!(
+            !policy
+                .evaluate(Action::Create, ObjectType::CustomSpu, None, &identity)
+                .await
+                .expect("eval")
+        );
+        assert!(
+            !policy
+                .evaluate(Action::Create, ObjectType::Topic, None, &identity)
+                .await
+                .expect("eval")
+        );
+        assert!(
+            policy
+                .evaluate(Action::Read, ObjectType::Topic, None, &identity)
+                .await
+                .expect("eval")
+        );
+        assert!(
+            policy
+                .evaluate(Action::Delete, ObjectType::Topic, Some("test"), &identity)
+                .await
+                .expect("eval")
+        );
+        assert!(
+            policy
+                .evaluate(Action::Update, ObjectType::Mirror, Some("user1"), &identity)
+                .await
+                .expect("eval")
+        );
+        assert!(
+            policy
+                .evaluate(Action::Update, ObjectType::Mirror, Some("user2"), &identity)
+                .await
+                .expect("eval")
+        );
+        assert!(
+            !policy
+                .evaluate(Action::Update, ObjectType::Mirror, Some("user3"), &identity)
+                .await
+                .expect("eval")
+        );
     }
 }

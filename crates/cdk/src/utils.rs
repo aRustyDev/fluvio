@@ -42,7 +42,7 @@ pub mod verify {
     pub fn connector_ipkg(ipkg_file: &str) -> Result<(), String> {
         tracing::debug!(pkg = ipkg_file, "reading connector metadata from ipkg file");
         let package_meta = fluvio_hub_util::package_get_meta(ipkg_file)
-            .map_err(|err| format!("missing package metadata: {}", err))?;
+            .map_err(|err| format!("missing package metadata: {err}"))?;
         let entries: Vec<&Path> = package_meta.manifest.iter().map(Path::new).collect();
 
         let connector_toml = entries
@@ -52,9 +52,9 @@ pub mod verify {
 
         let connector_toml_bytes =
             fluvio_hub_util::package_get_manifest_file(ipkg_file, connector_toml)
-                .map_err(|err| format!("missing connector.toml: {}", err))?;
+                .map_err(|err| format!("missing connector.toml: {err}"))?;
         let connector_metadata = ConnectorMetadata::from_toml_slice(&connector_toml_bytes)
-            .map_err(|err| format!("invalid connector.toml: {}", err))?;
+            .map_err(|err| format!("invalid connector.toml: {err}"))?;
         tracing::trace!("{:#?}", connector_metadata);
 
         let binary_name = connector_metadata
@@ -78,7 +78,12 @@ fn test_binary_in_manifest() {
         // (ipkg file, Option<errstr>)
 
         // this package was built with binary "foo", but the Connector.toml specifies "no-foo"
-        ("../../crates/cdk/tests/foo-0.1.0.ipkg", Some("Package missing binary file 'no-foo' specified in Connector.toml '[deployment]' section")),
+        (
+            "../../crates/cdk/tests/foo-0.1.0.ipkg",
+            Some(
+                "Package missing binary file 'no-foo' specified in Connector.toml '[deployment]' section",
+            ),
+        ),
     ];
 
     for (ipkg_file, opt_err_str) in ipkg_test_set {

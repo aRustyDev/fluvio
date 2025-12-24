@@ -103,7 +103,15 @@ where
     T: Into<Vec<u8>> + std::fmt::Debug,
 {
     let (parts, body) = request.into_parts();
-    let ureq_request: ureq::Request = parts.into();
+    let agent = configure_ureq_proxy()?; // Create agent with proxy
+    let mut ureq_request = agent.request(parts.method.as_ref(), &parts.uri.to_string());
+    for (name, value) in parts.headers {
+        let Some(name) = name else {
+            continue;
+        };
+        ureq_request = ureq_request.set(name.as_ref(), value.to_str().unwrap());
+    }
+
     let body_u8: Vec<u8> = body.into();
     let response = ureq_request
         .send_bytes(&body_u8)
@@ -125,7 +133,7 @@ fn configure_ureq_proxy() -> Result<Agent> {
     ];
 
     let proxy_creation = |proxy_str: &str, proxy_type: &str| -> Result<Proxy> {
-        Proxy::new(proxy_str).with_context(|| format!("Failed to create {} proxy", proxy_type))
+        Proxy::new(proxy_str).with_context(|| format!("Failed to create {proxy_type} proxy"))
     };
 
     for &(upper_var, lower_var, proxy_type) in &proxy_vars {

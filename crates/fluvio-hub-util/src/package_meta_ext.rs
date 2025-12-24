@@ -71,7 +71,7 @@ impl PackageMetaExt for PackageMeta {
             )))?;
 
         let publisted_at = DateTime::parse_from_rfc2822(published_at_pkg_tag.value.as_str())
-            .map_err(|err| HubError::General(format!("Failed to parse publish date. {}", err)))?;
+            .map_err(|err| HubError::General(format!("Failed to parse publish date. {err}")))?;
 
         Ok(publisted_at.to_utc())
     }
@@ -137,13 +137,13 @@ pub fn package_meta_from_bytes(reader: &[u8]) -> Result<PackageMeta> {
             continue;
         }
         let mut f = file?;
-        if let Ok(fp) = f.path() {
-            if fp == pkg_meta {
-                let mut buf = String::new();
-                f.read_to_string(&mut buf)?;
-                let pm: PackageMeta = serde_yaml::from_str(&buf)?;
-                return Ok(pm);
-            }
+        if let Ok(fp) = f.path()
+            && fp == pkg_meta
+        {
+            let mut buf = String::new();
+            f.read_to_string(&mut buf)?;
+            let pm: PackageMeta = serde_yaml::from_str(&buf)?;
+            return Ok(pm);
         }
     }
 

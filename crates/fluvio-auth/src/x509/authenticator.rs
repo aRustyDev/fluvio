@@ -7,7 +7,7 @@ use tracing::{debug, trace};
 use x509_parser::{certificate::X509Certificate, parse_x509_certificate};
 
 use fluvio_future::net::AsConnectionFd;
-use fluvio_future::{net::TcpStream, openssl::DefaultServerTlsStream};
+use fluvio_future::{net::TcpStream, rust_tls::DefaultServerTlsStream};
 use fluvio_protocol::api::{RequestMessage, ResponseMessage};
 use flv_tls_proxy::authenticator::Authenticator;
 
@@ -80,17 +80,16 @@ impl X509Authenticator {
     fn principal_from_tls_stream(tls_stream: &DefaultServerTlsStream) -> Result<String, Error> {
         trace!("tls_stream {:?}", tls_stream);
 
-        let peer_certificate = tls_stream.peer_certificate();
-
-        trace!("peer_certificate {:?}", peer_certificate);
-
         let client_certificate = tls_stream
-            .peer_certificate()
+            .get_ref()
+            .1
+            .peer_certificates()
+            .and_then(|certs| certs.first())
             .ok_or(Error::msg("peer certificate not found"))?;
 
-        trace!("client_certificate {:?}", tls_stream);
+        trace!("client_certificate found");
 
-        let principal = Self::principal_from_raw_certificate(&client_certificate.to_der()?)?;
+        let principal = Self::principal_from_raw_certificate(client_certificate.as_ref())?;
 
         Ok(principal)
     }
@@ -127,8 +126,8 @@ impl Authenticator for X509Authenticator {
         incoming_tls_stream: &DefaultServerTlsStream,
         target_tcp_stream: &TcpStream,
     ) -> Result<bool> {
-        let principal = Self::principal_from_tls_stream(incoming_tls_stream)
-            .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err))?;
+        let principal =
+            Self::principal_from_tls_stream(incoming_tls_stream).map_err(std::io::Error::other)?;
         let scopes = self.scope_bindings.get_scopes(&principal);
         let authorization_request = AuthRequest::new(principal, scopes);
         let success =
